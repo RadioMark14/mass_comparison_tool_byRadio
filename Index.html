@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Сравнение масс и возрастов знаменитостей</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(to bottom right, #f2f4f8, #e3e9f0);
+      color: #333;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    #compare-section {
+      margin-top: 40px;
+    }
+    .celeb-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      background-color: #f9f9f9;
+      max-width: 400px;
+    }
+    .comparison-list {
+      display: flex;
+      flex-direction: column;
+    }
+    canvas {
+      margin-top: 30px;
+      max-width: 100%;
+    }
+    .difference-box {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e6f2ff;
+      border-left: 5px solid #3399ff;
+      max-width: 500px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      max-width: 100%;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f8ff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Сравнение масс и возрастов знаменитостей</h1>
+  <p>Введите имя знаменитости из списка и нажмите «Compare».</p>
+
+  <input list="celebs" id="celebInput" placeholder="Введите имя знаменитости...">
+  <button onclick="compareCelebrity()">Compare</button>
+
+  <datalist id="celebs"></datalist>
+
+  <div id="compare-section">
+    <h2>Сравнительный список</h2>
+    <div class="comparison-list" id="comparisonList"></div>
+
+    <canvas id="massChart" width="800" height="400"></canvas>
+
+    <div class="difference-box" id="massDifferences"></div>
+
+    <h2>Вес на планетах</h2>
+    <div id="planetTableContainer"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Данные о знаменитостях (без изображений)
+    const celebrityData = {
+      "Johnny Depp": { age: 60, mass: 75 },
+      "Leonardo DiCaprio": { age: 49, mass: 78 },
+      "Robert Downey Jr.": { age: 59, mass: 78 },
+      "Scarlett Johansson": { age: 39, mass: 57 },
+      "Will Smith": { age: 56, mass: 82 },
+      "Angelina Jolie": { age: 49, mass: 54 },
+      "Brad Pitt": { age: 61, mass: 80 },
+      "Jennifer Lawrence": { age: 33, mass: 62 },
+      "Tom Hanks": { age: 67, mass: 83 },
+      "Chris Hemsworth": { age: 41, mass: 91 }
+    };
+
+    const comparisonList = [];
+    let chart;
+
+    function populateDatalist() {
+      const dl = document.getElementById("celebs");
+      dl.innerHTML = "";
+      for (let name in celebrityData) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        dl.appendChild(opt);
+      }
+    }
+    populateDatalist();
+
+    function compareCelebrity() {
+      const input = document.getElementById("celebInput");
+      const name = input.value.trim();
+
+      if (!celebrityData[name]) {
+        alert("Введите корректное имя знаменитости из списка.");
+        return;
+      }
+      if (comparisonList.includes(name)) {
+        alert(`${name} уже добавлен.`);
+        return;
+      }
+
+      comparisonList.push(name);
+      input.value = "";
+      updateComparisonList();
+      updateChart();
+      updateDifferences();
+      updatePlanetTable();
+    }
+
+    function updateComparisonList() {
+      const listDiv = document.getElementById("comparisonList");
+      listDiv.innerHTML = "";
+
+      comparisonList.forEach(name => {
+        const data = celebrityData[name];
+        const card = document.createElement("div");
+        card.className = "celeb-card";
+        card.innerHTML = `
+          <strong>${name}</strong><br>
+          Возраст: ${data.age}<br>
+          Масса: ${data.mass} кг
+        `;
+        listDiv.appendChild(card);
+      });
+    }
+
+    function updateChart() {
+      const ctx = document.getElementById("massChart").getContext("2d");
+
+      const labels = comparisonList;
+      const data = comparisonList.map(name => celebrityData[name].mass);
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Масса (кг)',
+            data: data,
+            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Масса (кг)' }
+            }
+          }
+        }
+      });
+    }
+
+    function updateDifferences() {
+      const box = document.getElementById("massDifferences");
+      box.innerHTML = "";
+
+      if (comparisonList.length < 2) {
+        box.innerHTML = "Добавьте хотя бы 2 знаменитости для сравнения.";
+        return;
+      }
+
+      let diffs = "";
+      for (let i = 0; i < comparisonList.length - 1; i++) {
+        for (let j = i + 1; j < comparisonList.length; j++) {
+          const name1 = comparisonList[i];
+          const name2 = comparisonList[j];
+          const mass1 = celebrityData[name1].mass;
+          const mass2 = celebrityData[name2].mass;
+          const diff = Math.abs(mass1 - mass2);
+          diffs += `<div>${name1} vs ${name2}: <strong>${diff.toFixed(1)} кг разница</strong></div>`;
+        }
+      }
+      box.innerHTML = diffs;
+    }
+
+    function updatePlanetTable() {
+      const container = document.getElementById("planetTableContainer");
+      container.innerHTML = "";
+
+      if (comparisonList.length === 0) return;
+
+      const planetMultipliers = {
+        Mercury: 0.38,
+        Venus: 0.91,
+        Earth: 1,
+        Mars: 0.38,
+        Jupiter: 2.34,
+        Saturn: 1.06,
+        Uranus: 0.92,
+        Neptune: 1.19
+      };
+
+      let table = `<table><thead><tr><th>Знаменитость</th>`;
+      for (let planet in planetMultipliers) {
+        table += `<th>${planet}</th>`;
+      }
+      table += `</tr></thead><tbody>`;
+
+      comparisonList.forEach(name => {
+        const mass = celebrityData[name].mass;
+        table += `<tr><td><strong>${name}</strong></td>`;
+        for (let planet in planetMultipliers) {
+          const multiplier = planetMultipliers[planet];
+          const weight = (mass * multiplier).toFixed(1);
+          table += `<td>${weight} кг</td>`;
+        }
+        table += `</tr>`;
+      });
+
+      table += `</tbody></table>`;
+      container.innerHTML = table;
+    }
+  </script>
+
+</body>
+</html>
