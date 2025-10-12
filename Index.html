@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Сравнение масс и возрастов знаменитостей</title>
   <style>
     body {
@@ -63,6 +63,22 @@
     th {
       background-color: rgba(240, 248, 255, 0.2);
     }
+    /* Preview image styles */
+    #previewImage {
+      margin-top: 15px;
+    }
+    #previewImage img {
+      width: 120px;
+      height: 120px;
+      border-radius: 10px;
+      border: 2px solid white;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    #previewImage img:hover {
+      transform: scale(1.05);
+      border-color: #66b3ff;
+    }
   </style>
 </head>
 <body>
@@ -70,10 +86,13 @@
   <h1>Сравнение масс и возрастов знаменитостей</h1>
   <p>Введите имя знаменитости из списка и нажмите «Compare».</p>
 
-  <input list="celebs" id="celebInput" placeholder="Введите имя знаменитости...">
+  <input list="celebs" id="celebInput" placeholder="Введите имя знаменитости..." autocomplete="off" />
   <button onclick="compareCelebrity()">Compare</button>
 
   <datalist id="celebs"></datalist>
+
+  <!-- Preview image only for typed celebrity -->
+  <div id="previewImage"></div>
 
   <div id="compare-section">
     <h2>Сравнительный список</h2>
@@ -90,16 +109,16 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const celebrityData = {
-      "Johnny Depp": { age: 60, mass: 75 },
-      "Leonardo DiCaprio": { age: 49, mass: 78 },
-      "Robert Downey Jr.": { age: 59, mass: 78 },
-      "Scarlett Johansson": { age: 39, mass: 57 },
-      "Will Smith": { age: 56, mass: 82 },
-      "Angelina Jolie": { age: 49, mass: 54 },
-      "Brad Pitt": { age: 61, mass: 80 },
-      "Jennifer Lawrence": { age: 33, mass: 62 },
-      "Tom Hanks": { age: 67, mass: 83 },
-      "Chris Hemsworth": { age: 41, mass: 91 }
+      "Johnny Depp": { age: 60, mass: 75, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Johnny_Depp_2020.jpg/120px-Johnny_Depp_2020.jpg" },
+      "Leonardo DiCaprio": { age: 49, mass: 78, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Leonardo_DiCaprio_2014.jpg/120px-Leonardo_DiCaprio_2014.jpg" },
+      "Robert Downey Jr.": { age: 59, mass: 78, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Robert_Downey_Jr_2014_Comic_Con_%28cropped%29.jpg/120px-Robert_Downey_Jr_2014_Comic_Con_%28cropped%29.jpg" },
+      "Scarlett Johansson": { age: 39, mass: 57, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Scarlett_Johansson_in_Kuwait_01b-tweaked.jpg/120px-Scarlett_Johansson_in_Kuwait_01b-tweaked.jpg" },
+      "Will Smith": { age: 56, mass: 82, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Will_Smith_2012.jpg/120px-Will_Smith_2012.jpg" },
+      "Angelina Jolie": { age: 49, mass: 54, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Angelina_Jolie_2_June_2014_%28cropped%29.jpg/120px-Angelina_Jolie_2_June_2014_%28cropped%29.jpg" },
+      "Brad Pitt": { age: 61, mass: 80, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Brad_Pitt_2019.jpg/120px-Brad_Pitt_2019.jpg" },
+      "Jennifer Lawrence": { age: 33, mass: 62, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Jennifer_Lawrence_at_2015_Comic-Con.jpg/120px-Jennifer_Lawrence_at_2015_Comic-Con.jpg" },
+      "Tom Hanks": { age: 67, mass: 83, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Tom_Hanks_TIFF_2019.jpg/120px-Tom_Hanks_TIFF_2019.jpg" },
+      "Chris Hemsworth": { age: 41, mass: 91, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Chris_Hemsworth_2019.jpg/120px-Chris_Hemsworth_2019.jpg" }
     };
 
     const comparisonList = [];
@@ -114,7 +133,28 @@
         dl.appendChild(opt);
       }
     }
+
     populateDatalist();
+
+    // Show preview image on input change
+    document.getElementById("celebInput").addEventListener("input", function () {
+      const name = this.value.trim();
+      showPreviewImage(name);
+    });
+
+    function showPreviewImage(name) {
+      const container = document.getElementById("previewImage");
+      if (celebrityData[name]) {
+        const imgSrc = celebrityData[name].img;
+        container.innerHTML = `
+          <a href="${imgSrc}" target="_blank" title="Открыть фото в новом окне">
+            <img src="${imgSrc}" alt="${name}" />
+          </a>
+        `;
+      } else {
+        container.innerHTML = "";
+      }
+    }
 
     function compareCelebrity() {
       const input = document.getElementById("celebInput");
@@ -131,6 +171,8 @@
 
       comparisonList.push(name);
       input.value = "";
+      showPreviewImage(""); // hide preview image after adding
+
       updateComparisonList();
       updateChart();
       updateDifferences();
@@ -179,76 +221,71 @@
             tooltip: { enabled: true }
           },
           scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Масса (кг)' }
-            }
+            y: { beginAtZero: true }
           }
         }
       });
     }
 
     function updateDifferences() {
-      const box = document.getElementById("massDifferences");
-      box.innerHTML = "";
-
+      const container = document.getElementById("massDifferences");
       if (comparisonList.length < 2) {
-        box.innerHTML = "Добавьте хотя бы 2 знаменитости для сравнения.";
+        container.innerHTML = "";
         return;
       }
-
-      let diffs = "";
-      for (let i = 0; i < comparisonList.length - 1; i++) {
+      let text = "<h3>Разница в массе между знаменитостями:</h3><ul>";
+      for (let i = 0; i < comparisonList.length; i++) {
         for (let j = i + 1; j < comparisonList.length; j++) {
-          const name1 = comparisonList[i];
-          const name2 = comparisonList[j];
-          const mass1 = celebrityData[name1].mass;
-          const mass2 = celebrityData[name2].mass;
-          const diff = Math.abs(mass1 - mass2);
-          diffs += `<div>${name1} vs ${name2}: <strong>${diff.toFixed(1)} кг разница</strong></div>`;
+          const c1 = comparisonList[i];
+          const c2 = comparisonList[j];
+          const diff = Math.abs(celebrityData[c1].mass - celebrityData[c2].mass);
+          text += `<li>${c1} и ${c2}: ${diff} кг</li>`;
         }
       }
-      box.innerHTML = diffs;
+      text += "</ul>";
+      container.innerHTML = text;
     }
 
     function updatePlanetTable() {
-      const container = document.getElementById("planetTableContainer");
-      container.innerHTML = "";
-
-      if (comparisonList.length === 0) return;
-
-      const planetMultipliers = {
-        Mercury: 0.38,
-        Venus: 0.91,
-        Earth: 1,
-        Mars: 0.38,
-        Jupiter: 2.34,
-        Saturn: 1.06,
-        Uranus: 0.92,
-        Neptune: 1.19
-      };
-
-      let table = `<table><thead><tr><th>Знаменитость</th>`;
-      for (let planet in planetMultipliers) {
-        table += `<th>${planet}</th>`;
+      if (comparisonList.length === 0) {
+        document.getElementById("planetTableContainer").innerHTML = "";
+        return;
       }
-      table += `</tr></thead><tbody>`;
+
+      const planetData = [
+        { name: "Меркурий", gravity: 3.7 },
+        { name: "Венера", gravity: 8.87 },
+        { name: "Луна", gravity: 1.62 },
+        { name: "Марс", gravity: 3.71 },
+        { name: "Юпитер", gravity: 24.79 },
+        { name: "Сатурн", gravity: 10.44 },
+        { name: "Уран", gravity: 8.69 },
+        { name: "Нептун", gravity: 11.15 },
+        { name: "Плутон", gravity: 0.62 }
+      ];
+
+      // Earth gravity for reference (9.81 m/s²)
+      const earthGravity = 9.81;
+
+      let html = "<table><thead><tr><th>Знаменитость</th>";
+      planetData.forEach(planet => {
+        html += `<th>${planet.name}</th>`;
+      });
+      html += "</tr></thead><tbody>";
 
       comparisonList.forEach(name => {
         const mass = celebrityData[name].mass;
-        table += `<tr><td><strong>${name}</strong></td>`;
-        for (let planet in planetMultipliers) {
-          const multiplier = planetMultipliers[planet];
-          const weight = (mass * multiplier).toFixed(1);
-          table += `<td>${weight} кг</td>`;
-        }
-        table += `</tr>`;
+        html += `<tr><td>${name}</td>`;
+        planetData.forEach(planet => {
+          const weightOnPlanet = ((planet.gravity / earthGravity) * mass).toFixed(1);
+          html += `<td>${weightOnPlanet} кг</td>`;
+        });
+        html += "</tr>";
       });
 
-      table += `</tbody></table>`;
-      container.innerHTML = table;
+      html += "</tbody></table>";
+      document.getElementById("planetTableContainer").innerHTML = html;
     }
   </script>
-
 </body>
 </html>
