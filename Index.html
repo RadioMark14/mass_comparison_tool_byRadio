@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Сравнение масс и возрастов знаменитостей</title>
+  <title>Comparison of Celebrities' Mass and Age</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -83,10 +83,10 @@
 </head>
 <body>
 
-  <h1>Сравнение масс и возрастов знаменитостей</h1>
-  <p>Введите имя знаменитости из списка и нажмите «Compare».</p>
+  <h1>Comparison of Celebrities' Mass and Age</h1>
+  <p>Enter a celebrity name from the list and press “Compare.”</p>
 
-  <input list="celebs" id="celebInput" placeholder="Введите имя знаменитости..." autocomplete="off" />
+  <input list="celebs" id="celebInput" placeholder="Enter celebrity name..." autocomplete="off" />
   <button onclick="compareCelebrity()">Compare</button>
 
   <datalist id="celebs"></datalist>
@@ -95,14 +95,14 @@
   <div id="previewImage"></div>
 
   <div id="compare-section">
-    <h2>Сравнительный список</h2>
+    <h2>Comparison List</h2>
     <div class="comparison-list" id="comparisonList"></div>
 
     <canvas id="massChart" width="800" height="400"></canvas>
 
     <div class="difference-box" id="massDifferences"></div>
 
-    <h2>Вес на планетах</h2>
+    <h2>Weight on Planets</h2>
     <div id="planetTableContainer"></div>
   </div>
 
@@ -147,7 +147,7 @@
       if (celebrityData[name]) {
         const imgSrc = celebrityData[name].img;
         container.innerHTML = `
-          <a href="${imgSrc}" target="_blank" title="Открыть фото в новом окне">
+          <a href="${imgSrc}" target="_blank" title="Open photo in new tab">
             <img src="${imgSrc}" alt="${name}" />
           </a>
         `;
@@ -161,11 +161,11 @@
       const name = input.value.trim();
 
       if (!celebrityData[name]) {
-        alert("Введите корректное имя знаменитости из списка.");
+        alert("Please enter a valid celebrity name from the list.");
         return;
       }
       if (comparisonList.includes(name)) {
-        alert(`${name} уже добавлен.`);
+        alert(`${name} is already added.`);
         return;
       }
 
@@ -189,8 +189,8 @@
         card.className = "celeb-card";
         card.innerHTML = `
           <strong>${name}</strong><br>
-          Возраст: ${data.age}<br>
-          Масса: ${data.mass} кг
+          Age: ${data.age}<br>
+          Mass: ${data.mass} kg
         `;
         listDiv.appendChild(card);
       });
@@ -209,7 +209,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: 'Масса (кг)',
+            label: 'Mass (kg)',
             data: data,
             backgroundColor: 'rgba(54, 162, 235, 0.7)'
           }]
@@ -233,13 +233,13 @@
         container.innerHTML = "";
         return;
       }
-      let text = "<h3>Разница в массе между знаменитостями:</h3><ul>";
+      let text = "<h3>Mass differences between celebrities:</h3><ul>";
       for (let i = 0; i < comparisonList.length; i++) {
         for (let j = i + 1; j < comparisonList.length; j++) {
           const c1 = comparisonList[i];
           const c2 = comparisonList[j];
           const diff = Math.abs(celebrityData[c1].mass - celebrityData[c2].mass);
-          text += `<li>${c1} и ${c2}: ${diff} кг</li>`;
+          text += `<li>${c1} and ${c2}: ${diff} kg</li>`;
         }
       }
       text += "</ul>";
@@ -253,21 +253,21 @@
       }
 
       const planetData = [
-        { name: "Меркурий", gravity: 3.7 },
-        { name: "Венера", gravity: 8.87 },
-        { name: "Луна", gravity: 1.62 },
-        { name: "Марс", gravity: 3.71 },
-        { name: "Юпитер", gravity: 24.79 },
-        { name: "Сатурн", gravity: 10.44 },
-        { name: "Уран", gravity: 8.69 },
-        { name: "Нептун", gravity: 11.15 },
-        { name: "Плутон", gravity: 0.62 }
+        { name: "Mercury", gravity: 3.7 },
+        { name: "Venus", gravity: 8.87 },
+        { name: "Moon", gravity: 1.62 },
+        { name: "Mars", gravity: 3.71 },
+        { name: "Jupiter", gravity: 24.79 },
+        { name: "Saturn", gravity: 10.44 },
+        { name: "Uranus", gravity: 8.69 },
+        { name: "Neptune", gravity: 11.15 },
+        { name: "Pluto", gravity: 0.62 }
       ];
 
       // Earth gravity for reference (9.81 m/s²)
       const earthGravity = 9.81;
 
-      let html = "<table><thead><tr><th>Знаменитость</th>";
+      let html = "<table><thead><tr><th>Celebrity</th>";
       planetData.forEach(planet => {
         html += `<th>${planet.name}</th>`;
       });
@@ -278,7 +278,7 @@
         html += `<tr><td>${name}</td>`;
         planetData.forEach(planet => {
           const weightOnPlanet = ((planet.gravity / earthGravity) * mass).toFixed(1);
-          html += `<td>${weightOnPlanet} кг</td>`;
+          html += `<td>${weightOnPlanet} kg</td>`;
         });
         html += "</tr>";
       });
