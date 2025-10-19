@@ -1,292 +1,229 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Comparison of Celebrities' Mass and Age</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: 
-        linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-        url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
-      background-size: cover;
-      color: #f0f0f0;
+import telebot
+from telebot import types
+import time
+import os
+
+# --- 1. CONFIGURATION (REQUIRED) ---
+
+# !!! IMPORTANT !!!
+# Replace 'YOUR_BOT_TOKEN_HERE' with the unique token you get from BotFather.
+# Search for @BotFather on Telegram, use the /newbot command, name it "SticksbyMark",
+# and it will give you the token.
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE" 
+
+# Mock data for your sticker packs
+STICKER_PACKS = {
+    "Abstract Cats": {
+        "description": "A collection of 20 modern, abstract cat stickers perfect for high-art chat rooms.",
+        "price": "5.99 USD",
+        "stock": 50
+    },
+    "Retro Gaming": {
+        "description": "Nostalgic 8-bit characters and power-ups for the old-school gamer. 30 unique designs.",
+        "price": "7.50 USD",
+        "stock": 10
+    },
+    "Foodie Fun": {
+        "description": "Express your hunger with these delicious, animated food stickers. 15 stickers.",
+        "price": "4.99 USD",
+        "stock": 100
     }
-    input, button {
-      padding: 10px;
-      font-size: 16px;
-      margin-right: 10px;
-    }
-    #compare-section {
-      margin-top: 40px;
-    }
-    .celeb-card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      background-color: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      max-width: 400px;
-    }
-    .comparison-list {
-      display: flex;
-      flex-direction: column;
-    }
-    canvas {
-      margin-top: 30px;
-      max-width: 100%;
-      background-color: #fff;
-      border-radius: 10px;
-      padding: 10px;
-    }
-    .difference-box {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: rgba(230, 242, 255, 0.2);
-      border-left: 5px solid #66b3ff;
-      max-width: 500px;
-    }
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-      max-width: 100%;
-      background-color: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-    th {
-      background-color: rgba(240, 248, 255, 0.2);
-    }
-    /* Preview image styles */
-    #previewImage {
-      margin-top: 15px;
-    }
-    #previewImage img {
-      width: 120px;
-      height: 120px;
-      border-radius: 10px;
-      border: 2px solid white;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    #previewImage img:hover {
-      transform: scale(1.05);
-      border-color: #66b3ff;
-    }
-  </style>
-</head>
-<body>
+}
 
-  <h1>Comparison of Celebrities' Mass and Age</h1>
-  <p>Enter a celebrity name from the list and press “Compare.”</p>
+# --- 2. BOT INITIALIZATION ---
 
-  <input list="celebs" id="celebInput" placeholder="Enter celebrity name..." autocomplete="off" />
-  <button onclick="compareCelebrity()">Compare</button>
+# Create the bot instance
+try:
+    bot = telebot.TeleBot(BOT_TOKEN)
+except Exception as e:
+    # Log an error if initialization fails (e.g., bad token format)
+    print(f"Error initializing bot: {e}")
+    exit()
 
-  <datalist id="celebs"></datalist>
+# Simple storage for custom sticker requests (for demonstration, in a real app, use a database)
+custom_requests = {} 
 
-  <!-- Preview image only for typed celebrity -->
-  <div id="previewImage"></div>
+# --- 3. KEYBOARD GENERATORS ---
 
-  <div id="compare-section">
-    <h2>Comparison List</h2>
-    <div class="comparison-list" id="comparisonList"></div>
+def create_main_menu_keyboard():
+    """Creates the Reply Keyboard with sticker packs and custom request."""
+    # Use ReplyKeyboardMarkup for the main persistent menu
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+    
+    # Add sticker pack names to the menu (in two columns for mobile readability)
+    pack_names = list(STICKER_PACKS.keys())
+    for i in range(0, len(pack_names), 2):
+        row = pack_names[i:i+2]
+        markup.row(*row)
+    
+    # Add the special 'Ask a custom sticker' button
+    markup.row("🎨 Ask a Custom Sticker")
+    
+    return markup
 
-    <canvas id="massChart" width="800" height="400"></canvas>
+def create_pack_inline_keyboard(pack_name):
+    """Creates an Inline Keyboard for a specific sticker pack product page."""
+    markup = types.InlineKeyboardMarkup()
+    
+    # Use callback data to identify the action and pack
+    buy_button = types.InlineKeyboardButton(
+        text=f"🛒 Buy {pack_name} Pack", 
+        callback_data=f"buy_{pack_name.replace(' ', '_')}"
+    )
+    # The 'back' button is crucial for navigation in inline menus
+    back_button = types.InlineKeyboardButton(
+        text="⬅️ Back to Menu", 
+        callback_data="back_to_menu"
+    )
+    
+    markup.add(buy_button)
+    markup.add(back_button)
+    return markup
 
-    <div class="difference-box" id="massDifferences"></div>
 
-    <h2>Weight on Planets</h2>
-    <div id="planetTableContainer"></div>
-  </div>
+# --- 4. MESSAGE HANDLERS ---
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const celebrityData = {
-      "Johnny Depp": { age: 60, mass: 75, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Johnny_Depp_2020.jpg/120px-Johnny_Depp_2020.jpg" },
-      "Leonardo DiCaprio": { age: 49, mass: 78, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Leonardo_DiCaprio_2014.jpg/120px-Leonardo_DiCaprio_2014.jpg" },
-      "Robert Downey Jr.": { age: 59, mass: 78, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Robert_Downey_Jr_2014_Comic_Con_%28cropped%29.jpg/120px-Robert_Downey_Jr_2014_Comic_Con_%28cropped%29.jpg" },
-      "Scarlett Johansson": { age: 39, mass: 57, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Scarlett_Johansson_in_Kuwait_01b-tweaked.jpg/120px-Scarlett_Johansson_in_Kuwait_01b-tweaked.jpg" },
-      "Will Smith": { age: 56, mass: 82, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Will_Smith_2012.jpg/120px-Will_Smith_2012.jpg" },
-      "Angelina Jolie": { age: 49, mass: 54, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Angelina_Jolie_2_June_2014_%28cropped%29.jpg/120px-Angelina_Jolie_2_June_2014_%28cropped%29.jpg" },
-      "Brad Pitt": { age: 61, mass: 80, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Brad_Pitt_2019.jpg/120px-Brad_Pitt_2019.jpg" },
-      "Jennifer Lawrence": { age: 33, mass: 62, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Jennifer_Lawrence_at_2015_Comic-Con.jpg/120px-Jennifer_Lawrence_at_2015_Comic-Con.jpg" },
-      "Tom Hanks": { age: 67, mass: 83, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Tom_Hanks_TIFF_2019.jpg/120px-Tom_Hanks_TIFF_2019.jpg" },
-      "Chris Hemsworth": { age: 41, mass: 91, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Chris_Hemsworth_2019.jpg/120px-Chris_Hemsworth_2019.jpg" }
-    };
+@bot.message_handler(commands=['start', 'menu'])
+def send_welcome(message):
+    """Handles the /start and /menu commands, showing the main menu."""
+    markup = create_main_menu_keyboard()
+    welcome_text = (
+        f"👋 Welcome to *SticksbyMark*, {message.from_user.first_name}!\n\n"
+        "I sell unique, hand-crafted sticker packs. Choose a pack below or request "
+        "a one-of-a-kind custom design!"
+    )
+    bot.send_message(
+        message.chat.id, 
+        welcome_text, 
+        parse_mode="Markdown", 
+        reply_markup=markup
+    )
 
-    const comparisonList = [];
-    let chart;
+@bot.message_handler(func=lambda message: message.text in STICKER_PACKS)
+def handle_sticker_pack_selection(message):
+    """Handles when a user clicks on a sticker pack name from the Reply Keyboard."""
+    pack_name = message.text
+    pack_info = STICKER_PACKS.get(pack_name)
+    
+    if not pack_info:
+        # Should not happen, but good for safety
+        bot.send_message(message.chat.id, "Sorry, I couldn't find details for that pack!")
+        return
 
-    function populateDatalist() {
-      const dl = document.getElementById("celebs");
-      dl.innerHTML = "";
-      for (let name in celebrityData) {
-        const opt = document.createElement("option");
-        opt.value = name;
-        dl.appendChild(opt);
-      }
-    }
+    # Format the product details message
+    details_text = (
+        f"*{pack_name} Pack Details*\n\n"
+        f"📜 Description: {pack_info['description']}\n"
+        f"💰 Price: {pack_info['price']}\n"
+        f"📦 Stock Remaining: {pack_info['stock']}"
+    )
+    
+    inline_markup = create_pack_inline_keyboard(pack_name)
+    
+    bot.send_message(
+        message.chat.id, 
+        details_text, 
+        parse_mode="Markdown", 
+        reply_markup=inline_markup
+    )
 
-    populateDatalist();
+@bot.message_handler(func=lambda message: message.text == "🎨 Ask a Custom Sticker")
+def handle_custom_sticker_start(message):
+    """Initiates the conversation for a custom sticker request."""
+    chat_id = message.chat.id
+    
+    msg = bot.send_message(
+        chat_id, 
+        "Great! Let's get your custom sticker started. Please describe your idea in detail (what is it, style, colors, usage, etc.)."
+    )
+    
+    # Register the next function to handle the user's description
+    bot.register_next_step_handler(msg, process_custom_sticker_description)
 
-    // Show preview image on input change
-    document.getElementById("celebInput").addEventListener("input", function () {
-      const name = this.value.trim();
-      showPreviewImage(name);
-    });
+def process_custom_sticker_description(message):
+    """Collects the custom sticker description and confirms the request."""
+    chat_id = message.chat.id
+    description = message.text
+    
+    # Store the request (or send it to the creator's private channel/email)
+    custom_requests[chat_id] = description
+    
+    confirmation_text = (
+        f"✅ Request Received!\n\n"
+        f"Your idea: _{description}_\n\n"
+        "I've saved your request and Mark will review it shortly. He will contact you directly via Telegram to discuss the quote and timeline. Thank you!"
+    )
+    
+    bot.send_message(
+        chat_id, 
+        confirmation_text, 
+        parse_mode="Markdown", 
+        reply_markup=create_main_menu_keyboard() # Bring back the main keyboard just in case
+    )
 
-    function showPreviewImage(name) {
-      const container = document.getElementById("previewImage");
-      if (celebrityData[name]) {
-        const imgSrc = celebrityData[name].img;
-        container.innerHTML = `
-          <a href="${imgSrc}" target="_blank" title="Open photo in new tab">
-            <img src="${imgSrc}" alt="${name}" />
-          </a>
-        `;
-      } else {
-        container.innerHTML = "";
-      }
-    }
 
-    function compareCelebrity() {
-      const input = document.getElementById("celebInput");
-      const name = input.value.trim();
+# --- 5. CALLBACK QUERY HANDLER (for Inline Buttons) ---
 
-      if (!celebrityData[name]) {
-        alert("Please enter a valid celebrity name from the list.");
-        return;
-      }
-      if (comparisonList.includes(name)) {
-        alert(`${name} is already added.`);
-        return;
-      }
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+    """Handles all inline button clicks (e.g., Buy, Back)."""
+    try:
+        if call.data == "back_to_menu":
+            # Send a simple message and remove the inline keyboard
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text="You are back to the main selection. Choose a pack below or type /menu.",
+                reply_markup=None # Remove the inline keyboard
+            )
+        
+        elif call.data.startswith("buy_"):
+            pack_key = call.data.replace("buy_", "").replace('_', ' ')
+            
+            # Acknowledges the click to stop the 'loading' animation on the button
+            bot.answer_callback_query(
+                callback_query_id=call.id, 
+                text=f"Simulating checkout for {pack_key}..."
+            )
+            
+            # Update the message to show a success/next step (e.g., a payment link)
+            checkout_text = (
+                f"Processing payment for *{pack_key}*.\n\n"
+                "In a real shop, this would be a link to a secure payment gateway (like Stripe or PayPal) "
+                "or instructions for direct payment."
+            )
+            
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text=checkout_text,
+                parse_mode="Markdown"
+            )
 
-      comparisonList.push(name);
-      input.value = "";
-      showPreviewImage(""); // hide preview image after adding
+    except Exception as e:
+        print(f"Error handling callback: {e}")
+        bot.answer_callback_query(
+            callback_query_id=call.id, 
+            text="An error occurred. Please try again."
+        )
 
-      updateComparisonList();
-      updateChart();
-      updateDifferences();
-      updatePlanetTable();
-    }
+# --- 6. MAIN POLLING LOOP ---
 
-    function updateComparisonList() {
-      const listDiv = document.getElementById("comparisonList");
-      listDiv.innerHTML = "";
-
-      comparisonList.forEach(name => {
-        const data = celebrityData[name];
-        const card = document.createElement("div");
-        card.className = "celeb-card";
-        card.innerHTML = `
-          <strong>${name}</strong><br>
-          Age: ${data.age}<br>
-          Mass: ${data.mass} kg
-        `;
-        listDiv.appendChild(card);
-      });
-    }
-
-    function updateChart() {
-      const ctx = document.getElementById("massChart").getContext("2d");
-
-      const labels = comparisonList;
-      const data = comparisonList.map(name => celebrityData[name].mass);
-
-      if (chart) chart.destroy();
-
-      chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Mass (kg)',
-            data: data,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)'
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: { enabled: true }
-          },
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    function updateDifferences() {
-      const container = document.getElementById("massDifferences");
-      if (comparisonList.length < 2) {
-        container.innerHTML = "";
-        return;
-      }
-      let text = "<h3>Mass differences between celebrities:</h3><ul>";
-      for (let i = 0; i < comparisonList.length; i++) {
-        for (let j = i + 1; j < comparisonList.length; j++) {
-          const c1 = comparisonList[i];
-          const c2 = comparisonList[j];
-          const diff = Math.abs(celebrityData[c1].mass - celebrityData[c2].mass);
-          text += `<li>${c1} and ${c2}: ${diff} kg</li>`;
-        }
-      }
-      text += "</ul>";
-      container.innerHTML = text;
-    }
-
-    function updatePlanetTable() {
-      if (comparisonList.length === 0) {
-        document.getElementById("planetTableContainer").innerHTML = "";
-        return;
-      }
-
-      const planetData = [
-        { name: "Mercury", gravity: 3.7 },
-        { name: "Venus", gravity: 8.87 },
-        { name: "Moon", gravity: 1.62 },
-        { name: "Mars", gravity: 3.71 },
-        { name: "Jupiter", gravity: 24.79 },
-        { name: "Saturn", gravity: 10.44 },
-        { name: "Uranus", gravity: 8.69 },
-        { name: "Neptune", gravity: 11.15 },
-        { name: "Pluto", gravity: 0.62 }
-      ];
-
-      // Earth gravity for reference (9.81 m/s²)
-      const earthGravity = 9.81;
-
-      let html = "<table><thead><tr><th>Celebrity</th>";
-      planetData.forEach(planet => {
-        html += `<th>${planet.name}</th>`;
-      });
-      html += "</tr></thead><tbody>";
-
-      comparisonList.forEach(name => {
-        const mass = celebrityData[name].mass;
-        html += `<tr><td>${name}</td>`;
-        planetData.forEach(planet => {
-          const weightOnPlanet = ((planet.gravity / earthGravity) * mass).toFixed(1);
-          html += `<td>${weightOnPlanet} kg</td>`;
-        });
-        html += "</tr>";
-      });
-
-      html += "</tbody></table>";
-      document.getElementById("planetTableContainer").innerHTML = html;
-    }
-  </script>
-</body>
-</html>
+if __name__ == '__main__':
+    print("Bot is starting...")
+    # This loop keeps the bot running and listening for new messages (polling mode)
+    while True:
+        try:
+            # Set up the bot's custom commands that appear in the menu
+            bot.set_my_commands([
+                types.BotCommand("/start", "Launches the main menu"),
+                types.BotCommand("/menu", "Shows the main sticker pack menu"),
+            ])
+            
+            bot.polling(none_stop=True)
+            
+        except Exception as e:
+            # Handle potential connection/API errors and attempt to restart
+            print(f"Polling error: {e}. Restarting in 5 seconds...")
+            time.sleep(5)
 
